@@ -42,8 +42,9 @@ def write_wheel_file(filename, contents):
 
 
 def write_wheel(out_dir, *, name, version, tag, metadata, description, contents, entry_points):
-    wheel_name = f'{name}-{version}-{tag}.whl'
-    dist_info  = f'{name}-{version}.dist-info'
+    name_snake = name.replace('-', '_')
+    wheel_name = f'{name_snake}-{version}-{tag}.whl'
+    dist_info  = f'{name_snake}-{version}.dist-info'
     return write_wheel_file(os.path.join(out_dir, wheel_name), {
         **contents,
         f'{dist_info}/entry_points.txt': ("""\
@@ -145,7 +146,7 @@ if __name__ == '__main__':
         description = f.read()
 
     return write_wheel(out_dir,
-        name='nodejs',
+        name='node-js',
         version=version,
         tag=f'py3-none-{platform}',
         metadata={

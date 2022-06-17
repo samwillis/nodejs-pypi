@@ -1,22 +1,34 @@
 Node.js PyPI distribution
 =====================
 
-[Node.js][] is an open-source, cross-platform, back-end JavaScript runtime environment that runs on the V8 engine and executes JavaScript code outside a web browser. 
+[Node.js][nodejs] is an open-source, cross-platform, back-end JavaScript runtime environment that runs on the V8 engine and executes JavaScript code outside a web browser. 
+
+**Note: this is an unofficial Node.js distribution.**
 
 The [node-js][pypi] Python package redistributes Node.js so that it can be used as a dependency of Python projects.
 
-**This is intended for use within Python virtual environments and containers, it should not be used for global instillation.**
+**This is intended for use within Python virtual environments and containers, it should probably not be used for global instillation.**
 
-[zig]: https://nodejs.org/
+This PyPI distribution is provided by <https://github.com/samwillis/nodejs-pypi>.
+
+[nodejs]: https://nodejs.org/
 [pypi]: https://pypi.org/project/node-js/
 
 Usage
 -----
 
-To run the Zig toolchain from the command line, use:
+To install:
+
+```shell
+pip install node-js
+```
+
+To run Node.js from the command line, use:
 
 ```shell
 python -m nodejs
+# or
+node
 ```
 
 `npm` and `npx` are also available as `python -m nodejs.npm` and `python -m nodejs.npx`.
@@ -44,7 +56,7 @@ import sys, subprocess
 subprocess.call([sys.executable, "-m", "nodejs"])
 ```
 
-`node`, `npm` and `npx` are also added to your Python environment's `bin` directory. This is usually on your `PATH` and so they should be available in your shell environment.
+Additionally, the standard `node`, `npm` and `npx` commands are also added to your Python environment's `bin` directory. This is usually on your `PATH` and so they should be available in your shell environment.
 
 License
 -------
