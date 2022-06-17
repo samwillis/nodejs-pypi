@@ -42,7 +42,7 @@ python make_wheels.py
 
 This command will download the Node.js release archives for every supported platform and convert them to binary wheels, which are placed under `dist/`. The Node.js version and platforms are configured in the script source.
 
-The process of converting release archives to binary wheels is deterministic, and the output of the script should be bit-for-bit identical regardless of the environment and platform it runs under. To this end, it prints the SHA256 hashes of inputs and outputs; the hashes of the inputs will match the ones on the [Zig downloads page][nodejsdl], and the hashes of the outputs will match the ones on the [PyPI downloads page][pypidl].
+The process of converting release archives to binary wheels is deterministic, and the output of the script should be bit-for-bit identical regardless of the environment and platform it runs under. To this end, it prints the SHA256 hashes of inputs and outputs; the hashes of the inputs will match the ones on the [Node.js downloads page][nodejsdl], and the hashes of the outputs will match the ones on the [PyPI downloads page][pypidl].
 
 [pypidl]: https://pypi.org/project/node-js/#files
 
