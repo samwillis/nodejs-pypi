@@ -5,14 +5,14 @@ Node.js PyPI distribution
 
 **Note: this is an unofficial Node.js distribution.**
 
-The [node-js][pypi] Python package redistributes Node.js so that it can be used as a dependency of Python projects.
+The [nodejs-bin][pypi] Python package redistributes Node.js so that it can be used as a dependency of Python projects.
 
 **This is intended for use within Python virtual environments and containers, it should probably not be used for global instillation.**
 
 This PyPI distribution is provided by <https://github.com/samwillis/nodejs-pypi>.
 
 [nodejs]: https://nodejs.org/
-[pypi]: https://pypi.org/project/node-js/
+[pypi]: https://pypi.org/project/nodejs-bin/
 
 Usage
 -----
@@ -20,14 +20,14 @@ Usage
 To install:
 
 ```shell
-pip install node-js
+pip install nodejs-bin
 ```
 
 To run Node.js from the command line, use:
 
 ```shell
 python -m nodejs
-# or
+# or (see below)
 node
 ```
 

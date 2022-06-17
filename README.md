@@ -9,7 +9,7 @@ The repackaged artifacts are published as the [node-js PyPI package][pypi].
 [nodejsdl]:  https://nodejs.org/en/download/
 [wheel]: https://github.com/pypa/wheel
 [pkgreadme]: README.pypi.md
-[pypi]: https://pypi.org/project/node-js/
+[pypi]: https://pypi.org/project/nodejs-bin/
 
 This tool is based on the work of the creators of the [Zig language][ziglang], see [the original][basedon]. Thank you!
 

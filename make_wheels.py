@@ -146,7 +146,7 @@ if __name__ == '__main__':
         description = f.read()
 
     return write_wheel(out_dir,
-        name='node-js',
+        name='nodejs-bin',
         version=version,
         tag=f'py3-none-{platform}',
         metadata={
