@@ -1,17 +1,59 @@
 import os
 import hashlib
 import urllib.request
+import libarchive
 from email.message import EmailMessage
-from wheel.wheelfile import WheelFile, get_zipinfo_datetime
+from wheel.wheelfile import WheelFile
 from zipfile import ZipInfo, ZIP_DEFLATED
-import libarchive # from libarchive-c
+from inspect import cleandoc
+
+
+# Versions to build if run as a script:
+BUILD_VERSIONS = ('14.19.3', '16.15.1', '18.4.0')
+
+# Suffix to append to the Wheel
+# For pre release versions this should be 'aN', e.g. 'a1'
+# For release versions this should be ''
+# If replacing a release version, this should be a build tag '-N', e.g. '-1'.
+# See https://peps.python.org/pep-0427/#file-name-convention for details.
+BUILD_SUFFIX = 'a2'
+
+# Main binary for node
+# Path of binary inn downloaded distribution to match
+NODE_BINS = ('bin/node', 'node.exe')
+
+# Other binaries
+# key: path of binary inn downloaded distribution to match
+# value: tuple of (
+#   <name>,
+#   <True = is a link to script to run with node, False = is executable>
+# )
+NODE_OTHER_BINS = {
+    'bin/npm': ('npm', True),
+    'npm.cmd': ('npm', False),
+    'bin/npx': ('npx', True),
+    'npx.cmd': ('npx', False),
+    'bin/corepack': ('corepack', True),     
+    'corepack.cmd': ('corepack', False),
+}
+
+# Mapping of node platforms to Python platforms
+PLATFORMS = {
+    'win-x86':      'win32',
+    'win-x64':      'win_amd64',
+    'darwin-x64':   'macosx_10_9_x86_64',
+    'darwin-arm64': 'macosx_11_0_arm64',
+    'linux-x64':    'manylinux_2_12_x86_64.manylinux2010_x86_64',
+    'linux-armv7l': 'manylinux_2_17_armv7l.manylinux2014_armv7l',
+    'linux-arm64':  'manylinux_2_17_aarch64.manylinux2014_aarch64',
+}
 
 
 class ReproducibleWheelFile(WheelFile):
     def writestr(self, zinfo, *args, **kwargs):
         if not isinstance(zinfo, ZipInfo):
             raise ValueError("ZipInfo required")
-        zinfo.date_time = (1980,1,1,0,0,0)
+        zinfo.date_time = (1980, 1, 1, 0, 0, 0)
         zinfo.create_system = 3
         super().writestr(zinfo, *args, **kwargs)
 
@@ -47,10 +89,10 @@ def write_wheel(out_dir, *, name, version, tag, metadata, description, contents,
     dist_info  = f'{name_snake}-{version}.dist-info'
     return write_wheel_file(os.path.join(out_dir, wheel_name), {
         **contents,
-        f'{dist_info}/entry_points.txt': ("""\
-[console_scripts]
-{entry_points}
-""".format(entry_points='\n'.join([f'{k} = {v}' for k, v in entry_points.items()] if entry_points else []))).encode('ascii'),
+        f'{dist_info}/entry_points.txt': (cleandoc("""
+            [console_scripts]
+            {entry_points}
+        """).format(entry_points='\n'.join([f'{k} = {v}' for k, v in entry_points.items()] if entry_points else []))).encode('ascii'),
         f'{dist_info}/METADATA': make_message({
             'Metadata-Version': '2.1',
             'Name': name,
@@ -66,21 +108,15 @@ def write_wheel(out_dir, *, name, version, tag, metadata, description, contents,
     })
 
 
-NODE_BINS = ('bin/node', 'node.exe')
-NODE_OTHER_BINS = {
-    'bin/npm': ('npm', True),
-    'npm.cmd': ('npm', False),
-    'bin/npx': ('npx', True),
-    'npx.cmd': ('npx', False),
-    'bin/corepack': ('corepack', True),     
-    'corepack.cmd': ('corepack', False),
-}
-
-
-def write_nodejs_wheel(out_dir, *, version, platform, archive):
+def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
     contents = {}
     entry_points = {}
-    contents['nodejs/__init__.py'] = f'__version__ = "{version}"\n'.encode('ascii')
+    contents['nodejs/__init__.py'] = cleandoc(f"""
+        from .node import path, main, run, start
+
+        __version__ = "{version}"
+        node_version = "{node_version}"
+    """).encode('ascii')
 
     with libarchive.memory_reader(archive) as archive:
         for entry in archive:
@@ -94,53 +130,83 @@ def write_nodejs_wheel(out_dir, *, version, platform, archive):
 
             if entry_name in NODE_BINS:
                 entry_points['node'] = 'nodejs.node:main'
-                contents['nodejs/node.py'] = f'''\
-import os, sys, subprocess
-def run(args):
-    return subprocess.call([
-        os.path.join(os.path.dirname(__file__), "{entry_name}"),
-        *args
-    ])
-def main():
-    sys.exit(run(sys.argv[1:]))
-if __name__ == '__main__':
-    main()
-'''.encode('ascii')
-                contents['nodejs/__main__.py'] = f'''\
-from .node import main
-if __name__ == '__main__':
-    main()
-'''.encode('ascii')
+                contents['nodejs/node.py'] = cleandoc(f"""
+                    import os, sys, subprocess
+
+                    path = os.path.join(os.path.dirname(__file__), "{entry_name}")
+
+                    def run(args, **kwargs):
+                        return subprocess.call([
+                            path,
+                            *args
+                        ], **kwargs)
+                    
+                    def start(args, **kwargs):
+                        return subprocess.Popen([
+                            path,
+                            *args
+                        ], **kwargs)
+                    
+                    def main():
+                        sys.exit(run(sys.argv[1:]))
+                    
+                    if __name__ == '__main__':
+                        main()
+                """).encode('ascii')
+                contents['nodejs/__main__.py'] = cleandoc(f"""
+                    from .node import main
+
+                    if __name__ == '__main__':
+                        main()
+                """).encode('ascii')
             elif entry_name in NODE_OTHER_BINS and NODE_OTHER_BINS[entry_name][1]:
                 entry_points[NODE_OTHER_BINS[entry_name][0]] = f'nodejs.{NODE_OTHER_BINS[entry_name][0]}:main'
                 script_name = '/'.join(os.path.normpath(os.path.join(os.path.dirname(entry.name), entry.linkpath)).split('/')[1:])
-                contents[f'nodejs/{NODE_OTHER_BINS[entry_name][0]}.py'] = f'''\
-import os, sys
-from .node import run as run_node
-def run(args):
-    return run_node([
-        os.path.join(os.path.dirname(__file__), "{script_name}"),
-        *args
-    ])
-def main():
-    sys.exit(run(sys.argv[1:]))
-if __name__ == '__main__':
-    main()
-'''.encode('ascii')
+                contents[f'nodejs/{NODE_OTHER_BINS[entry_name][0]}.py'] = cleandoc(f"""
+                    import os, sys
+                    from . import node
+
+                    def run(args, **kwargs):
+                        return node.run([
+                            os.path.join(os.path.dirname(__file__), "{script_name}"),
+                            *args
+                        ], **kwargs)
+                    
+                    def start(args, **kwargs):
+                        return node.start([
+                            os.path.join(os.path.dirname(__file__), "{script_name}"),
+                            *args
+                        ], **kwargs)
+                    
+                    def main():
+                        sys.exit(run(sys.argv[1:]))
+                    
+                    if __name__ == '__main__':
+                        main()
+                """).encode('ascii')
             elif entry_name in NODE_OTHER_BINS:
                 entry_points[NODE_OTHER_BINS[entry_name][0]] = f'nodejs.{NODE_OTHER_BINS[entry_name][0]}:main'
-                contents[f'nodejs/{NODE_OTHER_BINS[entry_name][0]}.py'] = f'''\
-import os, sys, subprocess
-def run(args):
-    return subprocess.call([
-        os.path.join(os.path.dirname(__file__), "{entry_name}"),
-        *args
-    ])
-def main():
-    sys.exit(run(sys.argv[1:]))
-if __name__ == '__main__':
-    main()
-'''.encode('ascii')
+                contents[f'nodejs/{NODE_OTHER_BINS[entry_name][0]}.py'] = cleandoc(f"""
+                    import os, sys, subprocess
+
+                    def run(args, **kwargs):
+                        return subprocess.call([
+                            os.path.join(os.path.dirname(__file__), "{entry_name}"),
+                            *args
+                        ], **kwargs)
+                    
+                    def start(args, **kwargs):
+                        return subprocess.Popen([
+                            os.path.join(os.path.dirname(__file__), "{entry_name}"),
+                            *args
+                        ], **kwargs)
+                    
+                    def main():
+                        sys.exit(run(sys.argv[1:]))
+                    
+                    if __name__ == '__main__':
+                        main()
+                """).encode('ascii')
 
     with open('README.pypi.md') as f:
         description = f.read()
@@ -167,34 +233,40 @@ if __name__ == '__main__':
     )
 
 
-def main():
-    print('Making Node.js Wheels')
-    node_version = '16.15.1'
-    out_version = f'{node_version}a1'
+def make_nodejs_version(node_version, suffix=''):
+    wheel_version = f'{node_version}{suffix}'
+    print('--')
+    print('Making Node.js Wheels for version', node_version)
+    if suffix:
+        print('Suffix:', suffix)
 
-    for node_platform, python_platform in {
-        'win-x86':      'win32',
-        'win-x64':      'win_amd64',
-        'darwin-x64':   'macosx_10_9_x86_64',
-        'darwin-arm64': 'macosx_11_0_arm64',
-        'linux-x64':    'manylinux_2_12_x86_64.manylinux2010_x86_64',
-        'linux-armv7l': 'manylinux_2_17_armv7l.manylinux2014_armv7l',
-        'linux-arm64':  'manylinux_2_17_aarch64.manylinux2014_aarch64',
-    }.items():
+    for node_platform, python_platform in PLATFORMS.items():
         print(f'- Making Wheel for {node_platform}')
         node_url = f'https://nodejs.org/dist/v{node_version}/node-v{node_version}-{node_platform}.' + \
                 ('zip' if node_platform.startswith('win-') else 'tar.xz')
-        with urllib.request.urlopen(node_url) as request:
-            node_archive = request.read()
-            print(f'  {hashlib.sha256(node_archive).hexdigest()} {node_url}')
+        
+        try:
+            with urllib.request.urlopen(node_url) as request:
+                node_archive = request.read()
+                print(f'  {node_url}')
+                print(f'    {hashlib.sha256(node_archive).hexdigest()}')
+        except urllib.error.HTTPError as e:
+            print(f'  {e.code} {e.reason}')
+            print(f'  Skipping {node_platform}')
+            continue
 
         wheel_path = write_nodejs_wheel('dist/',
-            version=out_version,
+            node_version=node_version,
+            version=wheel_version,
             platform=python_platform,
             archive=node_archive)
         with open(wheel_path, 'rb') as wheel:
-            print(f'  {hashlib.sha256(wheel.read()).hexdigest()} {wheel_path}')
+            print(f'  {wheel_path}')
+            print(f'    {hashlib.sha256(wheel.read()).hexdigest()}')
 
+def main():
+    for node_version in BUILD_VERSIONS:
+        make_nodejs_version(node_version, suffix=BUILD_SUFFIX)
 
 if __name__ == '__main__':
     main()
