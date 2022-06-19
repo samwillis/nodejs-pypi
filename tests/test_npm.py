@@ -1,7 +1,6 @@
 "Test nodejs.npm"
 
 import os
-from re import A
 
 
 def test_runs():
