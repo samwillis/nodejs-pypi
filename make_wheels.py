@@ -112,7 +112,7 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
     contents = {}
     entry_points = {}
     contents['nodejs/__init__.py'] = cleandoc(f"""
-        from .node import path, main, run, start
+        from .node import path, main, call, run, Popen
 
         __version__ = "{version}"
         node_version = "{node_version}"
@@ -135,20 +135,26 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
 
                     path = os.path.join(os.path.dirname(__file__), "{entry_name}")
 
-                    def run(args, **kwargs):
+                    def call(args, **kwargs):
                         return subprocess.call([
                             path,
                             *args
                         ], **kwargs)
+
+                    def run(args, **kwargs):
+                        return subprocess.run([
+                            path,
+                            *args
+                        ], **kwargs)
                     
-                    def start(args, **kwargs):
+                    def Popen(args, **kwargs):
                         return subprocess.Popen([
                             path,
                             *args
                         ], **kwargs)
                     
                     def main():
-                        sys.exit(run(sys.argv[1:]))
+                        sys.exit(call(sys.argv[1:]))
                     
                     if __name__ == '__main__':
                         main()
@@ -166,20 +172,26 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
                     import os, sys
                     from . import node
 
+                    def call(args, **kwargs):
+                        return node.call([
+                            os.path.join(os.path.dirname(__file__), "{script_name}"),
+                            *args
+                        ], **kwargs)
+
                     def run(args, **kwargs):
                         return node.run([
                             os.path.join(os.path.dirname(__file__), "{script_name}"),
                             *args
                         ], **kwargs)
                     
-                    def start(args, **kwargs):
-                        return node.start([
+                    def Popen(args, **kwargs):
+                        return node.Popen([
                             os.path.join(os.path.dirname(__file__), "{script_name}"),
                             *args
                         ], **kwargs)
                     
                     def main():
-                        sys.exit(run(sys.argv[1:]))
+                        sys.exit(call(sys.argv[1:]))
                     
                     if __name__ == '__main__':
                         main()
@@ -189,26 +201,32 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
                 contents[f'nodejs/{NODE_OTHER_BINS[entry_name][0]}.py'] = cleandoc(f"""
                     import os, sys, subprocess
 
-                    def run(args, **kwargs):
+                    def call(args, **kwargs):
                         return subprocess.call([
                             os.path.join(os.path.dirname(__file__), "{entry_name}"),
                             *args
                         ], **kwargs)
+
+                    def run(args, **kwargs):
+                        return subprocess.run([
+                            os.path.join(os.path.dirname(__file__), "{entry_name}"),
+                            *args
+                        ], **kwargs)
                     
-                    def start(args, **kwargs):
+                    def Popen(args, **kwargs):
                         return subprocess.Popen([
                             os.path.join(os.path.dirname(__file__), "{entry_name}"),
                             *args
                         ], **kwargs)
                     
                     def main():
-                        sys.exit(run(sys.argv[1:]))
+                        sys.exit(call(sys.argv[1:]))
                     
                     if __name__ == '__main__':
                         main()
                 """).encode('ascii')
 
-    with open('README.pypi.md') as f:
+    with open('README.md') as f:
         description = f.read()
 
     return write_wheel(out_dir,
@@ -223,7 +241,8 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
                 'License :: OSI Approved :: MIT License',
             ],
             'Project-URL': [
-                'Homepage, https://nodejs.org',
+                'Project Homepage, https://github.com/samwillis/nodejs-pypi',
+                'Node.js Homepage, https://nodejs.org',
             ],
             'Requires-Python': '~=3.5',
         },
