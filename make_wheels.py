@@ -14,7 +14,6 @@ BUILD_VERSIONS = ('14.19.3', '16.15.1', '18.4.0')
 # Suffix to append to the Wheel
 # For pre release versions this should be 'aN', e.g. 'a1'
 # For release versions this should be ''
-# If replacing a release version, this should be a build tag '-N', e.g. '-1'.
 # See https://peps.python.org/pep-0427/#file-name-convention for details.
 BUILD_SUFFIX = 'a2'
 
@@ -87,12 +86,13 @@ def write_wheel(out_dir, *, name, version, tag, metadata, description, contents,
     name_snake = name.replace('-', '_')
     wheel_name = f'{name_snake}-{version}-{tag}.whl'
     dist_info  = f'{name_snake}-{version}.dist-info'
-    return write_wheel_file(os.path.join(out_dir, wheel_name), {
-        **contents,
-        f'{dist_info}/entry_points.txt': (cleandoc("""
+    if entry_points:
+        contents[f'{dist_info}/entry_points.txt'] = (cleandoc("""
             [console_scripts]
             {entry_points}
         """).format(entry_points='\n'.join([f'{k} = {v}' for k, v in entry_points.items()] if entry_points else []))).encode('ascii'),
+    return write_wheel_file(os.path.join(out_dir, wheel_name), {
+        **contents,
         f'{dist_info}/METADATA': make_message({
             'Metadata-Version': '2.1',
             'Name': name,
@@ -129,7 +129,7 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
             contents[zip_info] = b''.join(entry.get_blocks())
 
             if entry_name in NODE_BINS:
-                entry_points['node'] = 'nodejs.node:main'
+                # entry_points['node'] = 'nodejs.node:main'
                 contents['nodejs/node.py'] = cleandoc(f"""
                     import os, sys, subprocess
 
@@ -166,7 +166,7 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
                         main()
                 """).encode('ascii')
             elif entry_name in NODE_OTHER_BINS and NODE_OTHER_BINS[entry_name][1]:
-                entry_points[NODE_OTHER_BINS[entry_name][0]] = f'nodejs.{NODE_OTHER_BINS[entry_name][0]}:main'
+                # entry_points[NODE_OTHER_BINS[entry_name][0]] = f'nodejs.{NODE_OTHER_BINS[entry_name][0]}:main'
                 script_name = '/'.join(os.path.normpath(os.path.join(os.path.dirname(entry.name), entry.linkpath)).split('/')[1:])
                 contents[f'nodejs/{NODE_OTHER_BINS[entry_name][0]}.py'] = cleandoc(f"""
                     import os, sys
@@ -197,7 +197,7 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
                         main()
                 """).encode('ascii')
             elif entry_name in NODE_OTHER_BINS:
-                entry_points[NODE_OTHER_BINS[entry_name][0]] = f'nodejs.{NODE_OTHER_BINS[entry_name][0]}:main'
+                # entry_points[NODE_OTHER_BINS[entry_name][0]] = f'nodejs.{NODE_OTHER_BINS[entry_name][0]}:main'
                 contents[f'nodejs/{NODE_OTHER_BINS[entry_name][0]}.py'] = cleandoc(f"""
                     import os, sys, subprocess
 
@@ -245,6 +245,8 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
                 'Node.js Homepage, https://nodejs.org',
             ],
             'Requires-Python': '~=3.5',
+            'Provides-Extra': 'cmd',
+            'Requires-Dist': "nodejs-cmd; extra == 'cmd'",
         },
         description=description,
         contents=contents,

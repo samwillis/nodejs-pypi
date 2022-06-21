@@ -1,4 +1,7 @@
 /dist
+nodejs-cmd/build
+nodejs-cmd/dist
+nodejs-cmd/*.egg-info
 .DS_Store
 env*/
 __pycache__/

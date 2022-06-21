@@ -23,6 +23,12 @@ To install:
 pip install nodejs-bin
 ```
 
+By default the command line `node`, `npm` and `npx` commands are not installed to prevent collisions with already installed Node.js versions. To install them:
+
+```shell
+pip install 'nodejs-bin[cmd]'
+```
+
 You can specify the Node.js version to install with:
 
 ```shell
@@ -39,13 +45,22 @@ To run Node.js from the command line, use:
 
 ```shell
 python -m nodejs
-# or (see below)
-node
 ```
 
-`npm` and `npx` are also available as `python -m nodejs.npm` and `python -m nodejs.npx`.
+`npm` and `npx` are also available as `nodejs.npm` and `nodejs.npx`:
 
-Additionally, the standard `node`, `npm` and `npx` commands are also added to your Python environment's `bin` directory. This is usually on your `PATH` and so they should be available in your shell environment.
+```shell
+python -m nodejs.npm
+python -m nodejs.npx
+```
+
+If you installed the optional command line commands with `pip install 'nodejs-bin[cmd]'` (see above), you can use them directly from the command line as you would normally with Node.js:
+
+```shell
+node
+npm
+npx
+```
 
 Python API Usage
 ----------------
@@ -111,6 +126,14 @@ Finally, there are a number of convenient attributes on the `nodejs` module:
 
   * `nodejs.node_version`: the version of Node.js that is installed.
   * `nodejs.path`: the path to the Node.js executable.
+
+
+Versions
+--------
+
+nodejs-bin offers Node.js *Current* and *LTS* (long-term support) versions. See the [Node.js Documentation](https://nodejs.org/en/about/releases/) for more information.
+
+The full list of versions is available on PyPI is here: <https://pypi.org/project/nodejs-bin/#history>
 
 
 License
