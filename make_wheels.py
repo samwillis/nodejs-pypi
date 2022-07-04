@@ -9,7 +9,7 @@ from inspect import cleandoc
 
 
 # Versions to build if run as a script:
-BUILD_VERSIONS = ('14.19.3',)# '16.15.1', '18.4.0')
+BUILD_VERSIONS = ('14.19.3', '16.15.1', '18.4.0')
 
 # Suffix to append to the Wheel
 # For pre release versions this should be 'aN', e.g. 'a1'
@@ -38,13 +38,13 @@ NODE_OTHER_BINS = {
 
 # Mapping of node platforms to Python platforms
 PLATFORMS = {
-    # 'win-x86':      'win32',
-    # 'win-x64':      'win_amd64',
+    'win-x86':      'win32',
+    'win-x64':      'win_amd64',
     'darwin-x64':   'macosx_10_9_x86_64',
-    # 'darwin-arm64': 'macosx_11_0_arm64',
-    # 'linux-x64':    'manylinux_2_12_x86_64.manylinux2010_x86_64',
-    # 'linux-armv7l': 'manylinux_2_17_armv7l.manylinux2014_armv7l',
-    # 'linux-arm64':  'manylinux_2_17_aarch64.manylinux2014_aarch64',
+    'darwin-arm64': 'macosx_11_0_arm64',
+    'linux-x64':    'manylinux_2_12_x86_64.manylinux2010_x86_64',
+    'linux-armv7l': 'manylinux_2_17_armv7l.manylinux2014_armv7l',
+    'linux-arm64':  'manylinux_2_17_aarch64.manylinux2014_aarch64',
 }
 
 
@@ -128,30 +128,37 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
                 init_imports.append('from . import node')
                 contents['nodejs/node.py'] = cleandoc(f"""
                     import os, sys, subprocess
+                    from typing import TYPE_CHECKING
 
                     path = os.path.join(os.path.dirname(__file__), "{entry_name}")
 
-                    def call(args, **kwargs):
-                        return subprocess.call([
-                            path,
-                            *args
-                        ], **kwargs)
+                    if TYPE_CHECKING:
+                        call = subprocess.call
+                        run = subprocess.run
+                        Popen = subprocess.Popen
 
-                    def run(args, **kwargs):
-                        return subprocess.run([
-                            path,
-                            *args
-                        ], **kwargs)
-                    
-                    def Popen(args, **kwargs):
-                        return subprocess.Popen([
-                            path,
-                            *args
-                        ], **kwargs)
-                    
-                    def main():
+                    else:
+                        def call(args, **kwargs):
+                            return subprocess.call([
+                                path,
+                                *args
+                            ], **kwargs)
+
+                        def run(args, **kwargs):
+                            return subprocess.run([
+                                path,
+                                *args
+                            ], **kwargs)
+                        
+                        def Popen(args, **kwargs):
+                            return subprocess.Popen([
+                                path,
+                                *args
+                            ], **kwargs)
+                        
+                    def main() -> None:
                         sys.exit(call(sys.argv[1:]))
-                    
+                        
                     if __name__ == '__main__':
                         main()
                 """).encode('ascii')
@@ -167,27 +174,34 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
                 script_name = '/'.join(os.path.normpath(os.path.join(os.path.dirname(entry.name), entry.linkpath)).split('/')[1:])
                 contents[f'nodejs/{NODE_OTHER_BINS[entry_name][0]}.py'] = cleandoc(f"""
                     import os, sys
+                    from typing import TYPE_CHECKING
                     from . import node
 
-                    def call(args, **kwargs):
-                        return node.call([
-                            os.path.join(os.path.dirname(__file__), "{script_name}"),
-                            *args
-                        ], **kwargs)
+                    if TYPE_CHECKING:
+                        call = subprocess.call
+                        run = subprocess.run
+                        Popen = subprocess.Popen
 
-                    def run(args, **kwargs):
-                        return node.run([
-                            os.path.join(os.path.dirname(__file__), "{script_name}"),
-                            *args
-                        ], **kwargs)
+                    else:
+                        def call(args, **kwargs):
+                            return node.call([
+                                os.path.join(os.path.dirname(__file__), "{script_name}"),
+                                *args
+                            ], **kwargs)
+
+                        def run(args, **kwargs):
+                            return node.run([
+                                os.path.join(os.path.dirname(__file__), "{script_name}"),
+                                *args
+                            ], **kwargs)
+                        
+                        def Popen(args, **kwargs):
+                            return node.Popen([
+                                os.path.join(os.path.dirname(__file__), "{script_name}"),
+                                *args
+                            ], **kwargs)
                     
-                    def Popen(args, **kwargs):
-                        return node.Popen([
-                            os.path.join(os.path.dirname(__file__), "{script_name}"),
-                            *args
-                        ], **kwargs)
-                    
-                    def main():
+                    def main() -> None:
                         sys.exit(call(sys.argv[1:]))
                     
                     if __name__ == '__main__':
@@ -198,26 +212,33 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
                 init_imports.append(f'from . import {NODE_OTHER_BINS[entry_name][0]}')
                 contents[f'nodejs/{NODE_OTHER_BINS[entry_name][0]}.py'] = cleandoc(f"""
                     import os, sys, subprocess
+                    from typing import TYPE_CHECKING
 
-                    def call(args, **kwargs):
-                        return subprocess.call([
-                            os.path.join(os.path.dirname(__file__), "{entry_name}"),
-                            *args
-                        ], **kwargs)
+                    if TYPE_CHECKING:
+                        call = subprocess.call
+                        run = subprocess.run
+                        Popen = subprocess.Popen
 
-                    def run(args, **kwargs):
-                        return subprocess.run([
-                            os.path.join(os.path.dirname(__file__), "{entry_name}"),
-                            *args
-                        ], **kwargs)
+                    else:
+                        def call(args, **kwargs):
+                            return subprocess.call([
+                                os.path.join(os.path.dirname(__file__), "{entry_name}"),
+                                *args
+                            ], **kwargs)
+
+                        def run(args, **kwargs):
+                            return subprocess.run([
+                                os.path.join(os.path.dirname(__file__), "{entry_name}"),
+                                *args
+                            ], **kwargs)
+                        
+                        def Popen(args, **kwargs):
+                            return subprocess.Popen([
+                                os.path.join(os.path.dirname(__file__), "{entry_name}"),
+                                *args
+                            ], **kwargs)
                     
-                    def Popen(args, **kwargs):
-                        return subprocess.Popen([
-                            os.path.join(os.path.dirname(__file__), "{entry_name}"),
-                            *args
-                        ], **kwargs)
-                    
-                    def main():
+                    def main() -> None:
                         sys.exit(call(sys.argv[1:]))
                     
                     if __name__ == '__main__':
