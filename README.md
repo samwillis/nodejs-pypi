@@ -7,7 +7,7 @@ The [nodejs-bin][pypi] Python package redistributes Node.js so that it can be us
 
 **Note: this is an unofficial Node.js distribution.**
 
-**This is intended for use within Python virtual environments and containers, it should probably not be used for global instillation.**
+**This is intended for use within Python virtual environments and containers, it should probably not be used for global installation.**
 
 This PyPI distribution is provided by <https://github.com/samwillis/nodejs-pypi>.
 
