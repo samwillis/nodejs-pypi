@@ -9,13 +9,13 @@ from inspect import cleandoc
 
 
 # Versions to build if run as a script:
-BUILD_VERSIONS = ('14.19.3', '16.15.1', '18.4.0')
+BUILD_VERSIONS = ('14.19.3',)# '16.15.1', '18.4.0')
 
 # Suffix to append to the Wheel
 # For pre release versions this should be 'aN', e.g. 'a1'
 # For release versions this should be ''
 # See https://peps.python.org/pep-0427/#file-name-convention for details.
-BUILD_SUFFIX = 'a2'
+BUILD_SUFFIX = 'a3'
 
 # Main binary for node
 # Path of binary inn downloaded distribution to match
@@ -38,13 +38,13 @@ NODE_OTHER_BINS = {
 
 # Mapping of node platforms to Python platforms
 PLATFORMS = {
-    'win-x86':      'win32',
-    'win-x64':      'win_amd64',
+    # 'win-x86':      'win32',
+    # 'win-x64':      'win_amd64',
     'darwin-x64':   'macosx_10_9_x86_64',
-    'darwin-arm64': 'macosx_11_0_arm64',
-    'linux-x64':    'manylinux_2_12_x86_64.manylinux2010_x86_64',
-    'linux-armv7l': 'manylinux_2_17_armv7l.manylinux2014_armv7l',
-    'linux-arm64':  'manylinux_2_17_aarch64.manylinux2014_aarch64',
+    # 'darwin-arm64': 'macosx_11_0_arm64',
+    # 'linux-x64':    'manylinux_2_12_x86_64.manylinux2010_x86_64',
+    # 'linux-armv7l': 'manylinux_2_17_armv7l.manylinux2014_armv7l',
+    # 'linux-arm64':  'manylinux_2_17_aarch64.manylinux2014_aarch64',
 }
 
 
@@ -111,12 +111,7 @@ def write_wheel(out_dir, *, name, version, tag, metadata, description, contents,
 def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
     contents = {}
     entry_points = {}
-    contents['nodejs/__init__.py'] = cleandoc(f"""
-        from .node import path, main, call, run, Popen
-
-        __version__ = "{version}"
-        node_version = "{node_version}"
-    """).encode('ascii')
+    init_imports = []
 
     with libarchive.memory_reader(archive) as archive:
         for entry in archive:
@@ -130,6 +125,7 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
 
             if entry_name in NODE_BINS:
                 # entry_points['node'] = 'nodejs.node:main'
+                init_imports.append('from . import node')
                 contents['nodejs/node.py'] = cleandoc(f"""
                     import os, sys, subprocess
 
@@ -167,6 +163,7 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
                 """).encode('ascii')
             elif entry_name in NODE_OTHER_BINS and NODE_OTHER_BINS[entry_name][1]:
                 # entry_points[NODE_OTHER_BINS[entry_name][0]] = f'nodejs.{NODE_OTHER_BINS[entry_name][0]}:main'
+                init_imports.append(f'from . import {NODE_OTHER_BINS[entry_name][0]}')
                 script_name = '/'.join(os.path.normpath(os.path.join(os.path.dirname(entry.name), entry.linkpath)).split('/')[1:])
                 contents[f'nodejs/{NODE_OTHER_BINS[entry_name][0]}.py'] = cleandoc(f"""
                     import os, sys
@@ -198,6 +195,7 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
                 """).encode('ascii')
             elif entry_name in NODE_OTHER_BINS:
                 # entry_points[NODE_OTHER_BINS[entry_name][0]] = f'nodejs.{NODE_OTHER_BINS[entry_name][0]}:main'
+                init_imports.append(f'from . import {NODE_OTHER_BINS[entry_name][0]}')
                 contents[f'nodejs/{NODE_OTHER_BINS[entry_name][0]}.py'] = cleandoc(f"""
                     import os, sys, subprocess
 
@@ -225,6 +223,18 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
                     if __name__ == '__main__':
                         main()
                 """).encode('ascii')
+    
+    contents['nodejs/__init__.py'] = (cleandoc("""
+        from .node import path, main, call, run, Popen
+        {init_imports}
+
+        __version__ = "{version}"
+        node_version = "{node_version}"
+    """)).format(
+        init_imports='\n'.join(init_imports),
+        version=version,
+        node_version=node_version,
+    ).encode('ascii')
 
     with open('README.md') as f:
         description = f.read()
