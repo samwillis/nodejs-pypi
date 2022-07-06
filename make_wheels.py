@@ -125,7 +125,7 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
 
             if entry_name in NODE_BINS:
                 # entry_points['node'] = 'nodejs.node:main'
-                init_imports.append('from . import node')
+                init_imports.append('from . import node as node')
                 contents['nodejs/node.py'] = cleandoc(f"""
                     import os, sys, subprocess
                     from typing import TYPE_CHECKING
@@ -169,8 +169,8 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
                         main()
                 """).encode('ascii')
             elif entry_name in NODE_OTHER_BINS and NODE_OTHER_BINS[entry_name][1]:
-                # entry_points[NODE_OTHER_BINS[entry_name][0]] = f'nodejs.{NODE_OTHER_BINS[entry_name][0]}:main'
-                init_imports.append(f'from . import {NODE_OTHER_BINS[entry_name][0]}')
+                other_bin = NODE_OTHER_BINS[entry_name][0]
+                init_imports.append(f'from . import {other_bin} as {other_bin}')
                 script_name = '/'.join(os.path.normpath(os.path.join(os.path.dirname(entry.name), entry.linkpath)).split('/')[1:])
                 contents[f'nodejs/{NODE_OTHER_BINS[entry_name][0]}.py'] = cleandoc(f"""
                     import os, sys
@@ -208,8 +208,8 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
                         main()
                 """).encode('ascii')
             elif entry_name in NODE_OTHER_BINS:
-                # entry_points[NODE_OTHER_BINS[entry_name][0]] = f'nodejs.{NODE_OTHER_BINS[entry_name][0]}:main'
-                init_imports.append(f'from . import {NODE_OTHER_BINS[entry_name][0]}')
+                other_bin = NODE_OTHER_BINS[entry_name][0]
+                init_imports.append(f'from . import {other_bin} as {other_bin}')
                 contents[f'nodejs/{NODE_OTHER_BINS[entry_name][0]}.py'] = cleandoc(f"""
                     import os, sys, subprocess
                     from typing import TYPE_CHECKING
@@ -246,7 +246,7 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
                 """).encode('ascii')
     
     contents['nodejs/__init__.py'] = (cleandoc("""
-        from .node import path, main, call, run, Popen
+        from .node import path as path, main as main, call as call, run as run, Popen as Popen
         {init_imports}
 
         __version__ = "{version}"
@@ -256,6 +256,7 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
         version=version,
         node_version=node_version,
     ).encode('ascii')
+    contents['nodejs/py.typed'] = b''
 
     with open('README.md') as f:
         description = f.read()
