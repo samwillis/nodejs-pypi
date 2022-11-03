@@ -77,7 +77,7 @@ jobs:
             pip install dist\nodejs_bin-${{matrix.nodejs-version}}a3-py3-none-win_amd64.whl
       - name: Test Package
         run:
-            python -m nodejs --version
-            python -m nodejs.npm --version
+            python -W error -m nodejs --version
+            python -W error -m nodejs.npm --version
 
 
