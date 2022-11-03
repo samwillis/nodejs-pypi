@@ -23,6 +23,7 @@ jobs:
             pip install -r requirements.txt
       - name: Build Wheels
         run: |
+          mkdir dist
           python make_wheels.py
       - name: Show built files
         run: |

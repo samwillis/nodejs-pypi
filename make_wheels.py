@@ -1,5 +1,6 @@
 import os
 import hashlib
+import pathlib
 import urllib.request
 import libarchive
 from email.message import EmailMessage
@@ -45,7 +46,16 @@ PLATFORMS = {
     'linux-x64':    'manylinux_2_12_x86_64.manylinux2010_x86_64',
     'linux-armv7l': 'manylinux_2_17_armv7l.manylinux2014_armv7l',
     'linux-arm64':  'manylinux_2_17_aarch64.manylinux2014_aarch64',
+    'linux-x64-musl': 'musllinux_1_1_x86_64'
 }
+
+# https://github.com/nodejs/unofficial-builds/
+# Versions added here should match the keys above
+UNOFFICIAL_NODEJS_BUILDS = {'linux-x64-musl'}
+
+_mismatched_versions = UNOFFICIAL_NODEJS_BUILDS - set(PLATFORMS.keys())
+if _mismatched_versions:
+    raise Exception(f"A version mismatch occurred. Check the usage of {_mismatched_versions}")
 
 
 class ReproducibleWheelFile(WheelFile):
@@ -112,6 +122,11 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
     contents = {}
     entry_points = {}
     init_imports = []
+
+    # Create the output directory if it does not exist
+    out_dir_path = pathlib.Path(out_dir)
+    if not out_dir_path.exists():
+        out_dir_path.mkdir(parents=True)
 
     with libarchive.memory_reader(archive) as archive:
         for entry in archive:
@@ -246,13 +261,16 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
                 """).encode('ascii')
     
     contents['nodejs/__init__.py'] = (cleandoc("""
+        import sys
         from .node import path as path, main as main, call as call, run as run, Popen as Popen
-        {init_imports}
+        if not '-m' in sys.argv:
+          {init_imports}
 
         __version__ = "{version}"
         node_version = "{node_version}"
     """)).format(
-        init_imports='\n'.join(init_imports),
+        # Note: two space indentation above and below is necessary to align
+        init_imports='\n  '.join(init_imports),
         version=version,
         node_version=node_version,
     ).encode('ascii')
@@ -294,10 +312,13 @@ def make_nodejs_version(node_version, suffix=''):
         print('Suffix:', suffix)
 
     for node_platform, python_platform in PLATFORMS.items():
-        print(f'- Making Wheel for {node_platform}')
-        node_url = f'https://nodejs.org/dist/v{node_version}/node-v{node_version}-{node_platform}.' + \
-                ('zip' if node_platform.startswith('win-') else 'tar.xz')
-        
+        filetype = 'zip' if node_platform.startswith('win-') else 'tar.xz'
+        if node_platform in UNOFFICIAL_NODEJS_BUILDS:
+            node_url = f'https://unofficial-builds.nodejs.org/download/release/v{node_version}/node-v{node_version}-{node_platform}.{filetype}'
+        else:
+            node_url = f'https://nodejs.org/dist/v{node_version}/node-v{node_version}-{node_platform}.{filetype}'
+
+        print(f'- Making Wheel for {node_platform} from {node_url}')
         try:
             with urllib.request.urlopen(node_url) as request:
                 node_archive = request.read()
