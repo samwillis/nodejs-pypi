@@ -28,6 +28,16 @@ jobs:
       - name: Show built files
         run: |
             ls -l dist/*
+      - name: Type Checking
+        run: |
+          python -m mypy
+      - name: Tests
+        run: |
+          for wheel in $(find dist -name "*manylinux*_x86_64.whl"); do
+            echo "Testing installation with wheel: ${wheel}"
+            pip install ${wheel}
+            python -m pytest
+          done
       - uses: actions/upload-artifact@v3
         with:
             name: nodejs-pip-wheels
