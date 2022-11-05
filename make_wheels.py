@@ -1,6 +1,8 @@
 import os
 import hashlib
 import urllib.request
+import urllib.error
+from typing import Dict, List, Any
 import libarchive
 from email.message import EmailMessage
 from wheel.wheelfile import WheelFile
@@ -48,8 +50,8 @@ PLATFORMS = {
 }
 
 
-class ReproducibleWheelFile(WheelFile):
-    def writestr(self, zinfo, *args, **kwargs):
+class ReproducibleWheelFile(WheelFile): # type: ignore[no-any-unimported]
+    def writestr(self, zinfo: ZipInfo, *args: Any, **kwargs: Any) -> None:
         if not isinstance(zinfo, ZipInfo):
             raise ValueError("ZipInfo required")
         zinfo.date_time = (1980, 1, 1, 0, 0, 0)
@@ -57,7 +59,7 @@ class ReproducibleWheelFile(WheelFile):
         super().writestr(zinfo, *args, **kwargs)
 
 
-def make_message(headers, payload=None):
+def make_message(headers: Dict[str, str | List[str]], payload: str | None =None) -> EmailMessage:
     msg = EmailMessage()
     for name, value in headers.items():
         if isinstance(value, list):
@@ -69,8 +71,9 @@ def make_message(headers, payload=None):
         msg.set_payload(payload)
     return msg
 
+WheelContents = Dict[ZipInfo | str, bytes | EmailMessage]
 
-def write_wheel_file(filename, contents):
+def write_wheel_file(filename: str, contents: WheelContents) -> str:
     with ReproducibleWheelFile(filename, 'w') as wheel:
         for member_info, member_source in contents.items():
             if not isinstance(member_info, ZipInfo):
@@ -82,15 +85,18 @@ def write_wheel_file(filename, contents):
     return filename
 
 
-def write_wheel(out_dir, *, name, version, tag, metadata, description, contents, entry_points):
+def write_wheel(out_dir: str, *, name: str, version: str, tag: str, metadata: Dict[str, str | List[str]], description: str, contents: WheelContents, entry_points: Dict[str, str]) -> str:
     name_snake = name.replace('-', '_')
     wheel_name = f'{name_snake}-{version}-{tag}.whl'
     dist_info  = f'{name_snake}-{version}.dist-info'
     if entry_points:
-        contents[f'{dist_info}/entry_points.txt'] = (cleandoc("""
+        entry_points_entries = '\n'.join([f'{k} = {v}' for k, v in entry_points.items()] if entry_points else [])
+        entry_points_file_contents = cleandoc("""
             [console_scripts]
             {entry_points}
-        """).format(entry_points='\n'.join([f'{k} = {v}' for k, v in entry_points.items()] if entry_points else []))).encode('ascii'),
+        """).format(entry_points=entry_points_entries)
+        contents[f'{dist_info}/entry_points.txt'] = entry_points_file_contents.encode('ascii')
+
     return write_wheel_file(os.path.join(out_dir, wheel_name), {
         **contents,
         f'{dist_info}/METADATA': make_message({
@@ -108,12 +114,12 @@ def write_wheel(out_dir, *, name, version, tag, metadata, description, contents,
     })
 
 
-def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
-    contents = {}
-    entry_points = {}
-    init_imports = []
+def write_nodejs_wheel(out_dir: str, *, node_version: str, version: str, platform: str, archive_contents: bytes) -> str:
+    contents: WheelContents = {}
+    entry_points: Dict[str, str] = {}
+    init_imports: List[str] = []
 
-    with libarchive.memory_reader(archive) as archive:
+    with libarchive.memory_reader(archive_contents) as archive:
         for entry in archive:
             entry_name = '/'.join(entry.name.split('/')[1:])
             if entry.isdir or not entry_name:
@@ -286,7 +292,7 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
     )
 
 
-def make_nodejs_version(node_version, suffix=''):
+def make_nodejs_version(node_version: str, suffix: str='') -> None:
     wheel_version = f'{node_version}{suffix}'
     print('--')
     print('Making Node.js Wheels for version', node_version)
@@ -312,12 +318,12 @@ def make_nodejs_version(node_version, suffix=''):
             node_version=node_version,
             version=wheel_version,
             platform=python_platform,
-            archive=node_archive)
+            archive_contents=node_archive)
         with open(wheel_path, 'rb') as wheel:
             print(f'  {wheel_path}')
             print(f'    {hashlib.sha256(wheel.read()).hexdigest()}')
 
-def main():
+def main() -> None:
     for node_version in BUILD_VERSIONS:
         make_nodejs_version(node_version, suffix=BUILD_SUFFIX)
 
