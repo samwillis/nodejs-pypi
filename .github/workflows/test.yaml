@@ -25,7 +25,7 @@ jobs:
         run: |
           mkdir dist
           python make_wheels.py
-      - name: Show built files
+      - name: Show built wheels
         run: |
             ls -l dist/*
       - name: Type Checking
@@ -89,5 +89,5 @@ jobs:
         run:
             python -m nodejs --version
             python -m nodejs.npm --version
-
-
+            python -m nodejs.npx --version
+            python -m nodejs.corepack --version
