@@ -1,4 +1,4 @@
-wheel
+wheel < 0.38
 twine
 libarchive-c
 pytest
