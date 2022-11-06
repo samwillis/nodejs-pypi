@@ -1,0 +1,83 @@
+name: Test
+on:
+  push:
+    branches:
+      - main
+  pull_request: {}
+
+concurrency: 
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-wheels:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+            pip install -r requirements.txt
+      - name: Build Wheels
+        run: |
+          mkdir dist
+          python make_wheels.py
+      - name: Show built files
+        run: |
+            ls -l dist/*
+      - uses: actions/upload-artifact@v3
+        with:
+            name: nodejs-pip-wheels
+            path: dist/
+            if-no-files-found: error
+            retention-days: 1
+
+  test:
+    name: "Test ${{ matrix.os }} Python:${{ matrix.python-version }} NodeJS:${{ matrix.nodejs-version }}"
+    runs-on: ${{ matrix.os }}
+    needs: [build-wheels]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        nodejs-version: ['16.15.1', '14.19.3', '18.4.0']
+        python-version: ['3.7', '3.8', '3.9', '3.10']
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/download-artifact@v3
+        with:
+            name: nodejs-pip-wheels
+            path: dist
+      - name: Show available wheels
+        run: |
+          ls dist
+      - name: Install Package (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+            WHEELS_TO_INSTALL=$(find dist -name "*${{matrix.nodejs-version}}*py3*manylinux*x86_64.whl")
+            echo "WHEELS_TO_INSTALL=${WHEELS_TO_INSTALL}"
+            pip install ${WHEELS_TO_INSTALL}
+      - name: Install Package (Mac OS)
+        if: matrix.os == 'macos-latest'
+        run: |
+            WHEELS_TO_INSTALL=$(find dist -name "*${{matrix.nodejs-version}}*py3*macosx*x86_64.whl")
+            echo "WHEELS_TO_INSTALL=${WHEELS_TO_INSTALL}"
+            pip install ${WHEELS_TO_INSTALL}
+      - name: Install Package (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+            pip install dist\nodejs_bin-${{matrix.nodejs-version}}a3-py3-none-win_amd64.whl
+      - name: Test Package
+        run:
+            python -m nodejs --version
+            python -m nodejs.npm --version
+
+
