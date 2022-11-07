@@ -79,6 +79,8 @@ jobs:
         run:
             python -W error -m nodejs --version
             python -W error -m nodejs.npm --version
+            python -W error -m nodejs.npx --version
+            python -W error -m nodejs.corepack --version
 
   test-linux:
     name: "Test Docker OS:${{ matrix.os-variant }} Python:${{ matrix.python-version }} NodeJS:${{ matrix.nodejs-version }}"

@@ -22,5 +22,7 @@ RUN if echo "${OS_VARIANT}" | grep -e "alpine"; then \
 
 RUN pip install dist/${WHEEL_TO_INSTALL}
 
-RUN python -m nodejs --version
-RUN python -m nodejs.npm --version
+RUN python -W error -m nodejs --version
+RUN python -W error -m nodejs.npm --version
+RUN python -W error -m nodejs.npx --version
+RUN python -W error -m nodejs.corepack --version
