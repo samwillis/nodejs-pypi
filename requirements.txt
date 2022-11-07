@@ -2,3 +2,6 @@ wheel
 twine
 libarchive-c
 pytest
+typing-extensions
+mypy
+types-setuptools
