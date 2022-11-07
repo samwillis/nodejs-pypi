@@ -1,5 +1,6 @@
 import os
 import hashlib
+import platform
 import urllib.request
 import urllib.error
 from typing import Dict, List, Any
@@ -8,6 +9,14 @@ from email.message import EmailMessage
 from wheel.wheelfile import WheelFile
 from zipfile import ZipInfo, ZIP_DEFLATED
 from inspect import cleandoc
+
+# To support our internal typings, we require Python3.10+, but to KISS
+# for now we only support building this project with Python3.10 (this is
+# a developer only requirement)
+(python_major, python_minor, _python_patch) = platform.python_version_tuple()
+if not (python_major == '3' and python_minor == '10'):
+    breakpoint()
+    raise Exception(f"This build script is expected to run on Python 3.10, but you are using {platform.python_version()}")
 
 
 # Versions to build if run as a script:
