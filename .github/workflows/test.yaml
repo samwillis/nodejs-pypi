@@ -35,14 +35,14 @@ jobs:
             if-no-files-found: error
             retention-days: 1
 
-  test:
+  test-non-linux:
     name: "Test ${{ matrix.os }} Python:${{ matrix.python-version }} NodeJS:${{ matrix.nodejs-version }}"
     runs-on: ${{ matrix.os }}
     needs: [build-wheels]
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest, macos-latest]
         nodejs-version: ['14.19.3', '16.15.1', '18.4.0']
         python-version: ['3.7', '3.8', '3.9', '3.10']
 
@@ -79,7 +79,8 @@ jobs:
         run:
             python -W error -m nodejs --version
             python -W error -m nodejs.npm --version
-  test-docker:
+
+  test-linux:
     name: "Test Docker OS:${{ matrix.os-variant }} Python:${{ matrix.python-version }} NodeJS:${{ matrix.nodejs-version }}"
     runs-on: ubuntu-latest
     needs: [build-wheels]
