@@ -5,7 +5,10 @@ Node.js PyPI distribution
 
 The [nodejs-bin][pypi] Python package redistributes Node.js so that it can be used as a dependency of Python projects. With `nodejs-bin` you can call `nodejs`, `npm` and `npx` from both the [command line](#command-line-usage) and a [Python API](#python-api-usage).
 
-**Note: this is an unofficial Node.js distribution.**
+**Note: this is an unofficial Node.js distribution.** However, it _does_ use only official bits distributed by the official NodeJS maintainers from one of the following sources:
+
+* NodeJS official releases: https://nodejs.org/en/download/releases/
+* NodeJS "unofficial" builds: https://github.com/nodejs/unofficial-builds/
 
 **This is intended for use within Python virtual environments and containers, it should probably not be used for global installation.**
 

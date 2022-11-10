@@ -6,3 +6,7 @@ nodejs-cmd/*.egg-info
 env*/
 __pycache__/
 *.py[cod]
+venv
+package.json
+node_modules
+package-lock.json
