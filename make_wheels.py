@@ -188,7 +188,7 @@ def write_nodejs_wheel(out_dir, *, node_version, version, platform, archive):
                 init_imports.append(f'from . import {other_bin} as {other_bin}')
                 script_name = '/'.join(os.path.normpath(os.path.join(os.path.dirname(entry.name), entry.linkpath)).split('/')[1:])
                 contents[f'nodejs/{NODE_OTHER_BINS[entry_name][0]}.py'] = cleandoc(f"""
-                    import os, sys
+                    import os, sys, subprocess
                     from typing import TYPE_CHECKING
                     from . import node
 
