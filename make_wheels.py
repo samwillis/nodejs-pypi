@@ -320,7 +320,7 @@ def make_nodejs_version(node_version, suffix=''):
 
         print(f'- Making Wheel for {node_platform} from {node_url}')
         try:
-            with urllib.request.urlopen(node_url) as request:
+            with urllib.request.urlopen(node_url, timeout=30) as request:
                 node_archive = request.read()
                 print(f'  {node_url}')
                 print(f'    {hashlib.sha256(node_archive).hexdigest()}')
